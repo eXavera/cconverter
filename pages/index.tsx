@@ -13,7 +13,7 @@ import {
     Notice
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
-import { ConversionResponse } from '../api-interface/convert'
+import { ConversionResponse, ErrorResponse } from '../api-interface/convert'
 
 interface IConverterPageProps {
     supportedCurrencies: string[]
@@ -27,19 +27,21 @@ interface IConvertFormProps {
 }
 
 const doSubmit = async function (values: IConvertFormProps, formControls: FormikHelpers<IConvertFormProps>): Promise<number> {
-    console.log(values)
+    if (values.sourceAmount === 0) {
+        return values.sourceAmount;
+    }
 
-    const resp = await fetch(`/api/convert/${values.sourceCurrency.value}/${values.targetCurrency.value}?amount=${(values.sourceAmount * 100).toFixed(0)}`)
-    const result = (await resp.json()) as ConversionResponse
-
-    return result.result / 100
+    const httpResp = await fetch(`/api/convert/${encodeURIComponent(values.sourceCurrency.value)}/${encodeURIComponent(values.targetCurrency.value)}?amount=${(values.sourceAmount * 100).toFixed(0)}`)
+    if (httpResp.status !== 200) {
+        throw new Error(`server reported failure "${httpResp.statusText}"`)
+    }
+    const convResp = (await httpResp.json()) as ConversionResponse
+    return convResp.result / 100
 }
 
 const ConversionResult: React.FC<{ amount: number, currency: string }> = (props) => {
     return (
-        <Box>
-            <Text size="large"> = {props.amount.toFixed(2)} {props.currency}</Text>
-        </Box>
+        <Text size="large"> = {props.amount.toFixed(2)} {props.currency}</Text>
     )
 }
 
@@ -47,6 +49,7 @@ const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
     const [targetAmount, setTargetAmount] = useState(0)
     const [targeCurrency, setTargetCurrency] = useState('USD')
     const [isLoading, setIsLoading] = useState(false)
+    const [conversionError, setConversionError] = useState('')
 
     const allCurrencyItems = supportedCurrencies.map<SelectOption>(name => ({
         label: name,
@@ -73,16 +76,22 @@ const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
 
     return (
         <Formik<IConvertFormProps> initialValues={initialValues} validate={validateForm} onSubmit={async (values, controls) => {
+            setConversionError('')
             setIsLoading(true)
-            const resultAmount = await doSubmit(values, controls)
-            setTargetAmount(resultAmount)
-            setTargetCurrency(values.targetCurrency.label)
-            setIsLoading(false)
+            try {
+                const resultAmount = await doSubmit(values, controls)
+                setTargetAmount(resultAmount)
+                setTargetCurrency(values.targetCurrency.label)
+            }
+            catch (err : any) {
+                setConversionError(err.toString())
+            }
+            finally {
+                setIsLoading(false)
+            }
         }}>
             {(props): React.ReactNode => {
                 const { values, setFieldValue, handleSubmit, errors } = props;
-
-                console.log('errors', errors)
 
                 return (
                     <Flex alignItems="stretch" flexDirection="column">
@@ -117,8 +126,11 @@ const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
                                 </Button>
                             </Flex>
                         </Form>
-                        {isLoading ? <Spinner size="large" /> : <ConversionResult amount={targetAmount} currency={targeCurrency} />}
-                        {errors.validationError && <Notice colorTheme="warning" mt="1em">{errors.validationError}</Notice>}
+                        <Box mt="1em" mb="1em">
+                            {isLoading ? <Spinner size="large" /> : <ConversionResult amount={targetAmount} currency={targeCurrency} />}
+                            {errors.validationError && <Notice colorTheme="warning">{errors.validationError}</Notice>}
+                        </Box>
+                        { conversionError && <Notice colorTheme="error"> {conversionError}</Notice> }
                     </Flex>
                 )
             }}

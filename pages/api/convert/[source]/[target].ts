@@ -1,14 +1,13 @@
 import { ConversionResponse } from '../../../../api-interface/convert'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { setTimeout } from 'timers/promises'
+import { object, string, number } from 'yup'
+import { handleErrors as handleErrorsOf } from '../../../../middlewares/api-error-handler'
 
-type Currency = string
-
-interface IApiResponse {
-  rates: Record<Currency, number>
+type APIResponse = {
+  rates: Record<string, number>
 }
 
-const getUsdRate = async function(targetCurrency: Currency) : Promise<number> {
+const getUsdRate = async function (targetCurrency: string): Promise<number> {
   const apiParams = new URLSearchParams([
     ['app_id', '19e5783e6cd041899952b9a962164469'],
     ['base', 'USD'],
@@ -16,46 +15,56 @@ const getUsdRate = async function(targetCurrency: Currency) : Promise<number> {
   ])
 
   const apiHttpResp = await fetch('https://openexchangerates.org/api/latest.json?' + apiParams.toString())
-  const apiResponse = <IApiResponse>(await apiHttpResp.json())
+  const apiResponse = <APIResponse>(await apiHttpResp.json())
 
   return apiResponse.rates[targetCurrency]
 }
 
-const convert = async function(sourceCurrency: Currency, targetCurrency: Currency, amount: number) : Promise<number> {
+const convert = async function (sourceCurrency: string, targetCurrency: string, amount: number): Promise<number> {
   if (sourceCurrency === 'USD') {
     return amount * await getUsdRate(targetCurrency)
   }
-  else if(targetCurrency === 'USD') {
+  else if (targetCurrency === 'USD') {
     return amount / await getUsdRate(sourceCurrency)
   }
   return -1; // report error
 }
 
-export default async function handler(
+
+const requestParamsSchema = object({
+  sourceCurrency: string().required().length(3).uppercase(),
+  targetCurrency: string().required().length(3).uppercase(),
+  amount: number().required()
+})
+
+const handler = handleErrorsOf<ConversionResponse>(async function(
   req: NextApiRequest,
   res: NextApiResponse<ConversionResponse>
 ) {
-  const sourceCurrency = <Currency>req.query['source']
-  const targetCurrency = <Currency>req.query['target']
-  const amount: number = parseInt(<string>req.query['amount'], 10)
+  const reqParams = await requestParamsSchema.validate({
+    sourceCurrency: req.query['source'],
+    targetCurrency: req.query['target'],
+    amount: req.query['amount']
+  })
 
-  if (sourceCurrency === targetCurrency) {
-    await setTimeout(1500)
-
+  if (reqParams.sourceCurrency === reqParams.targetCurrency) {
     res.status(200).json({
-      result: amount
+      result: reqParams.amount
     })
     return
   }
 
-  if (amount === 0) {
+  if (reqParams.amount === 0) {
     res.status(200).json({
-      result: amount
+      result: reqParams.amount
     })
     return
   }
+
 
   res.status(200).json({
-    result: Math.round(await convert(sourceCurrency, targetCurrency, amount))
+    result: Math.round(await convert(reqParams.sourceCurrency, reqParams.targetCurrency, reqParams.amount))
   })
-}
+})
+
+export default handler
