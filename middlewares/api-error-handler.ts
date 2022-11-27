@@ -1,31 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ValidationError } from 'yup'
 
-export type ErrorResponse = {
-	error: string
-}
-
 type Handler<TResp> = {
 	(req: NextApiRequest, res: NextApiResponse<TResp>): Promise<void>
 }
 
-export function handleErrors<TResp>(handler: Handler<TResp>
-): Handler<TResp | ErrorResponse> {
+type ErrorText = string
+
+export function handleErrorsOf<TResp>(handler: Handler<TResp>
+): Handler<TResp | ErrorText> {
 	
-	return (async (req: NextApiRequest, res: NextApiResponse<TResp | ErrorResponse>) => {
+	return (async (req: NextApiRequest, res: NextApiResponse<TResp | ErrorText>) => {
 		try{
 			await handler(req, res)
 		}
 		catch (error: any) {
 			if (error instanceof ValidationError) {
-			  res.status(400).send({
-				error: error.errors[0]
-			  })
+			  res.status(400).send(error.errors.join('\n'))
 			}
 			else {
-			  res.status(500).send({
-				error: error.toString()
-			  })
+			  res.status(500).send(error.toString())
 			}
 		  }
 	})

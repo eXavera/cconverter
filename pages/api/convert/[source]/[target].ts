@@ -1,7 +1,7 @@
 import { ConversionResponse } from '../../../../api-interface/convert'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { object, string, number } from 'yup'
-import { handleErrors as handleErrorsOf } from '../../../../middlewares/api-error-handler'
+import { handleErrorsOf } from '../../../../middlewares/api-error-handler'
 
 type APIResponse = {
   rates: Record<string, number>
@@ -9,12 +9,13 @@ type APIResponse = {
 
 const getUsdRate = async function (targetCurrency: string): Promise<number> {
   const apiParams = new URLSearchParams([
-    ['app_id', '19e5783e6cd041899952b9a962164469'],
+    ['app_id', process.env.OPEN_EX_RATES_APPID as string],
     ['base', 'USD'],
     ['symbols', targetCurrency]
   ])
 
   const apiHttpResp = await fetch('https://openexchangerates.org/api/latest.json?' + apiParams.toString())
+  // check status
   const apiResponse = <APIResponse>(await apiHttpResp.json())
 
   return apiResponse.rates[targetCurrency]
@@ -37,7 +38,7 @@ const requestParamsSchema = object({
   amount: number().required()
 })
 
-const handler = handleErrorsOf<ConversionResponse>(async function(
+const handler = handleErrorsOf(async function(
   req: NextApiRequest,
   res: NextApiResponse<ConversionResponse>
 ) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { GetServerSideProps, GetStaticProps } from 'next'
+import { GetServerSideProps } from 'next'
 import { Form, Formik, FormikErrors, FormikHelpers } from 'formik'
 import {
     Flex,
@@ -13,7 +13,7 @@ import {
     Notice
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
-import { ConversionResponse, ErrorResponse } from '../api-interface/convert'
+import { ConversionResponse } from '../api-interface/convert'
 
 interface IConverterPageProps {
     supportedCurrencies: string[]
@@ -31,12 +31,15 @@ const doSubmit = async function (values: IConvertFormProps, formControls: Formik
         return values.sourceAmount;
     }
 
-    const httpResp = await fetch(`/api/convert/${encodeURIComponent(values.sourceCurrency.value)}/${encodeURIComponent(values.targetCurrency.value)}?amount=${(values.sourceAmount * 100).toFixed(0)}`)
-    if (httpResp.status !== 200) {
-        throw new Error(`server reported failure "${httpResp.statusText}"`)
+    const encode = encodeURIComponent;
+
+    const httpResp = await fetch(`/api/convert/${encode(values.sourceCurrency.value)}/${encode(values.targetCurrency.value)}?amount=${(values.sourceAmount * 100).toFixed(0)}`)
+    if (httpResp.status === 200) {
+        const convResp = (await httpResp.json()) as ConversionResponse
+        return convResp.result / 100      
     }
-    const convResp = (await httpResp.json()) as ConversionResponse
-    return convResp.result / 100
+ 
+    throw new Error(`server reported failure (HTTP status ${httpResp.status})`)
 }
 
 const ConversionResult: React.FC<{ amount: number, currency: string }> = (props) => {
