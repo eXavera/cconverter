@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { GetServerSideProps } from 'next'
-import { Form, Formik, FormikErrors, FormikHelpers } from 'formik'
+import { Form, Formik, FormikErrors } from 'formik'
 import {
     Flex,
     NumberInput,
@@ -13,86 +13,98 @@ import {
     Notice
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
-import { ConversionResponse } from '../api-interface/convert'
+import { ConversionResult, Currency } from '../Common/types'
+import * as ExchangeRateApi from '../ExchangeRateApi'
 
-interface IConverterPageProps {
-    supportedCurrencies: string[]
+const config = {
+    maxDecimals: 2
+}
+
+const USD: Currency = 'USD'
+
+const toSelectOption = (currency: Currency): SelectOption => {
+    return {
+        value: currency,
+        label: currency
+    }
+}
+
+type ConversionStatus = { code: 'ready' } | { code: 'pending' } | { code: 'converted', result: number, currency: Currency } | { code: 'failed', reason: string }
+
+const useConvertApi = function (): { status: ConversionStatus, convert: (source: Currency, target: Currency, amount: number) => Promise<void> } {
+    const [status, setStatus] = useState<ConversionStatus>({ code: 'ready' })
+
+    return {
+        status,
+        convert: async (source: Currency, target: Currency, amount: number) => {
+            if (amount === 0) {
+                setStatus({
+                    code: 'converted',
+                    result: amount,
+                    currency: target
+                })
+                return
+            }
+
+            setStatus({ code: 'pending' })
+
+            const factor: number = Math.pow(10, config.maxDecimals)
+
+            const encode = encodeURIComponent;
+            const httpResp = await fetch(`/api/convert/${encode(source)}/${encode(target)}?amount=${(amount * factor).toFixed(0)}`)
+            if (httpResp.status === 200) {
+                const convResp = await httpResp.json() as ConversionResult
+                setStatus({
+                    code: 'converted',
+                    result: Math.round(convResp.amount) / factor,
+                    currency: target
+                })
+            }
+            else {
+                setStatus({
+                    code: 'failed',
+                    reason: `server reported failure (HTTP status ${httpResp.status})`
+                })
+            }
+        }
+    }
+}
+
+interface IPageProps {
+    supportedCurrencies: Currency[]
 }
 
 interface IConvertFormProps {
     sourceAmount: number,
-    sourceCurrency: SelectOption,
-    targetCurrency: SelectOption,
+    sourceCurrency: Currency,
+    targetCurrency: Currency,
     validationError?: string
 }
 
-const doSubmit = async function (values: IConvertFormProps, formControls: FormikHelpers<IConvertFormProps>): Promise<number> {
-    if (values.sourceAmount === 0) {
-        return values.sourceAmount;
-    }
-
-    const encode = encodeURIComponent;
-
-    const httpResp = await fetch(`/api/convert/${encode(values.sourceCurrency.value)}/${encode(values.targetCurrency.value)}?amount=${(values.sourceAmount * 100).toFixed(0)}`)
-    if (httpResp.status === 200) {
-        const convResp = (await httpResp.json()) as ConversionResponse
-        return convResp.result / 100      
-    }
- 
-    throw new Error(`server reported failure (HTTP status ${httpResp.status})`)
+const ResultAmount: React.FC<{ amount: number, currency: Currency }> = (props) => {
+    return <Text size="large"> = {props.amount.toFixed(config.maxDecimals)} {props.currency}</Text>
 }
 
-const ConversionResult: React.FC<{ amount: number, currency: string }> = (props) => {
-    return (
-        <Text size="large"> = {props.amount.toFixed(2)} {props.currency}</Text>
-    )
-}
+const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
+    const { status, convert } = useConvertApi()
 
-const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
-    const [targetAmount, setTargetAmount] = useState(0)
-    const [targeCurrency, setTargetCurrency] = useState('USD')
-    const [isLoading, setIsLoading] = useState(false)
-    const [conversionError, setConversionError] = useState('')
-
-    const allCurrencyItems = supportedCurrencies.map<SelectOption>(name => ({
-        label: name,
-        value: name
-    }))
-
-    const usd = allCurrencyItems.find(curr => curr.value === 'USD') as SelectOption
+    const allCurrencyItems: SelectOption[] = supportedCurrencies.map(toSelectOption)
 
     const initialValues: IConvertFormProps = {
         sourceAmount: 0,
-        sourceCurrency: usd,
-        targetCurrency: usd
+        sourceCurrency: USD,
+        targetCurrency: USD
     }
 
     const validateForm = (values: IConvertFormProps): FormikErrors<IConvertFormProps> => {
-        if (values.sourceCurrency.value !== usd.value && values.targetCurrency.value != usd.value) {
-            return {
-                validationError: 'One of the currency has to be USD'
-            }
-        }
-
-        return {}
+        return values.sourceCurrency !== USD && values.targetCurrency != USD ? { validationError: 'One of the currency has to be ' + USD } : {}
     }
 
     return (
-        <Formik<IConvertFormProps> initialValues={initialValues} validate={validateForm} onSubmit={async (values, controls) => {
-            setConversionError('')
-            setIsLoading(true)
-            try {
-                const resultAmount = await doSubmit(values, controls)
-                setTargetAmount(resultAmount)
-                setTargetCurrency(values.targetCurrency.label)
-            }
-            catch (err : any) {
-                setConversionError(err.toString())
-            }
-            finally {
-                setIsLoading(false)
-            }
-        }}>
+        <Formik<IConvertFormProps>
+            initialValues={initialValues}
+            validate={validateForm}
+            onSubmit={async (values) => await convert(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
             {(props): React.ReactNode => {
                 const { values, setFieldValue, handleSubmit, errors } = props;
 
@@ -104,36 +116,38 @@ const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
                                     label='Source Amount'
                                     name='sourceAmount'
                                     value={values.sourceAmount}
+                                    maxDecimalCount={config.maxDecimals}
                                     onChange={(amount => setFieldValue('sourceAmount', amount))} />
                                 <SelectNative
                                     label='Source Currency'
                                     name='sourceCurrency'
-                                    value={values.sourceCurrency}
+                                    value={toSelectOption(values.sourceCurrency)}
                                     options={allCurrencyItems}
-                                    onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
+                                    onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency?.value)} />
                                 <SelectNative
                                     label='Target Currency'
                                     name='targetCurrency'
-                                    disabled={isLoading}
-                                    value={values.targetCurrency}
+                                    disabled={status.code === 'pending'}
+                                    value={toSelectOption(values.targetCurrency)}
                                     options={allCurrencyItems}
-                                    onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
+                                    onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency?.value)} />
                                 <Button
                                     icon="play-circle"
                                     iconAlignment='right'
                                     type="submit"
-                                    loading={isLoading}
-                                    disabled={isLoading}
+                                    loading={status.code === 'pending'}
+                                    disabled={status.code === 'pending'}
                                     ml="1em">
                                     Convert
                                 </Button>
                             </Flex>
                         </Form>
                         <Box mt="1em" mb="1em">
-                            {isLoading ? <Spinner size="large" /> : <ConversionResult amount={targetAmount} currency={targeCurrency} />}
+                            {status.code === 'pending' && <Spinner size="large" />}
+                            {status.code === 'converted' && <ResultAmount amount={status.result} currency={status.currency} />}
                             {errors.validationError && <Notice colorTheme="warning">{errors.validationError}</Notice>}
                         </Box>
-                        { conversionError && <Notice colorTheme="error"> {conversionError}</Notice> }
+                        {status.code === 'failed' && <Notice colorTheme="error"> {status.reason}</Notice>}
                     </Flex>
                 )
             }}
@@ -143,13 +157,11 @@ const IndexPage: React.FC<IConverterPageProps> = ({ supportedCurrencies }) => {
 
 export default IndexPage
 
-export const getServerSideProps: GetServerSideProps<ILayoutProps> = async () => {
-    const res = await fetch(`https://openexchangerates.org/api/currencies.json`)
-    const data = await res.json()
+export const getServerSideProps: GetServerSideProps<ILayoutProps & IPageProps> = async () => {
     return {
         props: {
             title: 'Converter',
-            supportedCurrencies: Object.keys(data)
+            supportedCurrencies: await ExchangeRateApi.getAvailableCurrencies()
         }
     }
 }

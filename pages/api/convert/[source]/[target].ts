@@ -1,36 +1,9 @@
-import { ConversionResponse } from '../../../../api-interface/convert'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { object, string, number } from 'yup'
-import { handleErrorsOf } from '../../../../middlewares/api-error-handler'
 
-type APIResponse = {
-  rates: Record<string, number>
-}
-
-const getUsdRate = async function (targetCurrency: string): Promise<number> {
-  const apiParams = new URLSearchParams([
-    ['app_id', process.env.OPEN_EX_RATES_APPID as string],
-    ['base', 'USD'],
-    ['symbols', targetCurrency]
-  ])
-
-  const apiHttpResp = await fetch('https://openexchangerates.org/api/latest.json?' + apiParams.toString())
-  // check status
-  const apiResponse = <APIResponse>(await apiHttpResp.json())
-
-  return apiResponse.rates[targetCurrency]
-}
-
-const convert = async function (sourceCurrency: string, targetCurrency: string, amount: number): Promise<number> {
-  if (sourceCurrency === 'USD') {
-    return amount * await getUsdRate(targetCurrency)
-  }
-  else if (targetCurrency === 'USD') {
-    return amount / await getUsdRate(sourceCurrency)
-  }
-  return -1; // report error
-}
-
+import { ConversionResult } from '../../../../Common/types'
+import { handleErrorsOf } from '../../../../ErrorHandling/ApiErrorHandler'
+import * as ExchangeRateApi from '../../../../ExchangeRateApi'
 
 const requestParamsSchema = object({
   sourceCurrency: string().required().length(3).uppercase(),
@@ -38,34 +11,17 @@ const requestParamsSchema = object({
   amount: number().required()
 })
 
-const handler = handleErrorsOf(async function(
-  req: NextApiRequest,
-  res: NextApiResponse<ConversionResponse>
-) {
+const requestHandler = handleErrorsOf(async function (httpReq: NextApiRequest, httpResp: NextApiResponse<ConversionResult>) {
   const reqParams = await requestParamsSchema.validate({
-    sourceCurrency: req.query['source'],
-    targetCurrency: req.query['target'],
-    amount: req.query['amount']
+    sourceCurrency: httpReq.query['source'],
+    targetCurrency: httpReq.query['target'],
+    amount: httpReq.query['amount']
   })
-
-  if (reqParams.sourceCurrency === reqParams.targetCurrency) {
-    res.status(200).json({
-      result: reqParams.amount
-    })
-    return
-  }
-
-  if (reqParams.amount === 0) {
-    res.status(200).json({
-      result: reqParams.amount
-    })
-    return
-  }
-
-
-  res.status(200).json({
-    result: Math.round(await convert(reqParams.sourceCurrency, reqParams.targetCurrency, reqParams.amount))
+  
+  const convertedAmount: number = await ExchangeRateApi.convert(reqParams.sourceCurrency, reqParams.targetCurrency, reqParams.amount)
+  httpResp.status(200).json({
+    amount: convertedAmount
   })
 })
 
-export default handler
+export default requestHandler
