@@ -22,16 +22,18 @@ const config = {
 
 const USD: Currency = 'USD'
 
-const toSelectOption = (currency: Currency): SelectOption => {
-    return {
-        value: currency,
-        label: currency
-    }
+type ConversionStatus =
+    { code: 'ready' } |
+    { code: 'pending' } |
+    { code: 'converted', result: number, currency: Currency } |
+    { code: 'failed', reason: string }
+
+type ConversionApi = {
+    status: ConversionStatus,
+    convert: (source: Currency, target: Currency, amount: number) => Promise<void>
 }
 
-type ConversionStatus = { code: 'ready' } | { code: 'pending' } | { code: 'converted', result: number, currency: Currency } | { code: 'failed', reason: string }
-
-const useConvertApi = function (): { status: ConversionStatus, convert: (source: Currency, target: Currency, amount: number) => Promise<void> } {
+const useConvertApi = function () : ConversionApi {
     const [status, setStatus] = useState<ConversionStatus>({ code: 'ready' })
 
     return {
@@ -81,15 +83,21 @@ interface IConvertFormProps {
     validationError?: string
 }
 
+const toSelectOption = (currency: Currency): SelectOption => {
+    return {
+        value: currency,
+        label: currency
+    }
+}
+
 const ResultAmount: React.FC<{ amount: number, currency: Currency }> = (props) => {
     return <Text size="large"> = {props.amount.toFixed(config.maxDecimals)} {props.currency}</Text>
 }
 
 const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
-    const { status, convert } = useConvertApi()
+    const { status, convert: convertAmount } : ConversionApi = useConvertApi()
 
-    const allCurrencyItems: SelectOption[] = supportedCurrencies.map(toSelectOption)
-
+    const allCurrencyOptions: SelectOption[] = supportedCurrencies.map(toSelectOption)
     const initialValues: IConvertFormProps = {
         sourceAmount: 0,
         sourceCurrency: USD,
@@ -104,7 +112,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
         <Formik<IConvertFormProps>
             initialValues={initialValues}
             validate={validateForm}
-            onSubmit={async (values) => await convert(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
+            onSubmit={async (values) => await convertAmount(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
             {(props): React.ReactNode => {
                 const { values, setFieldValue, handleSubmit, errors } = props;
 
@@ -122,14 +130,14 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                     label='Source Currency'
                                     name='sourceCurrency'
                                     value={toSelectOption(values.sourceCurrency)}
-                                    options={allCurrencyItems}
+                                    options={allCurrencyOptions}
                                     onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency?.value)} />
                                 <SelectNative
                                     label='Target Currency'
                                     name='targetCurrency'
                                     disabled={status.code === 'pending'}
                                     value={toSelectOption(values.targetCurrency)}
-                                    options={allCurrencyItems}
+                                    options={allCurrencyOptions}
                                     onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency?.value)} />
                                 <Button
                                     icon="play-circle"
