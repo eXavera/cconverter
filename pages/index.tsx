@@ -10,7 +10,8 @@ import {
     Box,
     Text,
     Spinner,
-    Notice
+    Notice,
+    SelectNativeProps
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
 import { ConversionResult, Currency } from '../Common/types'
@@ -30,15 +31,15 @@ type ConversionStatus =
 
 type ConversionApi = {
     status: ConversionStatus,
-    convert: (source: Currency, target: Currency, amount: number) => Promise<void>
+    convertAmount: (source: Currency, target: Currency, amount: number) => Promise<void>
 }
 
-const useConvertApi = function () : ConversionApi {
+const useConvertApi = function (): ConversionApi {
     const [status, setStatus] = useState<ConversionStatus>({ code: 'ready' })
 
     return {
         status,
-        convert: async (source: Currency, target: Currency, amount: number) => {
+        convertAmount: async (source: Currency, target: Currency, amount: number) => {
             if (amount === 0) {
                 setStatus({
                     code: 'converted',
@@ -76,40 +77,61 @@ interface IPageProps {
     supportedCurrencies: Currency[]
 }
 
-interface IConvertFormProps {
+interface IConvertFormValues {
     sourceAmount: number,
     sourceCurrency: Currency,
     targetCurrency: Currency,
     validationError?: string
 }
 
-const toSelectOption = (currency: Currency): SelectOption => {
-    return {
-        value: currency,
-        label: currency
-    }
-}
-
 const ResultAmount: React.FC<{ amount: number, currency: Currency }> = (props) => {
     return <Text size="large"> = {props.amount.toFixed(config.maxDecimals)} {props.currency}</Text>
 }
 
-const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
-    const { status, convert: convertAmount } : ConversionApi = useConvertApi()
+interface SelectCurrencyProps extends Omit<SelectNativeProps, "onChange"> {
+    currency: Currency,
+    currencies: Currency[]
+    onChange: (value: Currency | null) => void
+}
 
-    const allCurrencyOptions: SelectOption[] = supportedCurrencies.map(toSelectOption)
-    const initialValues: IConvertFormProps = {
+const SelectCurrency: React.FC<SelectCurrencyProps> = ({
+    currency,
+    currencies,
+    onChange: onChange,
+    ...props
+}) => {
+    const toSelectOption = (currency: Currency): SelectOption => {
+        return {
+            value: currency,
+            label: currency
+        }
+    }
+
+    return (
+        <SelectNative
+            value={toSelectOption(currency)}
+            options={currencies.map(toSelectOption)}
+            onChange={selectedValue => onChange(selectedValue?.value as Currency)}
+            {...props}
+        />
+    )
+}
+
+const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
+    const { status, convertAmount }: ConversionApi = useConvertApi()
+
+    const initialValues: IConvertFormValues = {
         sourceAmount: 0,
         sourceCurrency: USD,
         targetCurrency: USD
     }
 
-    const validateForm = (values: IConvertFormProps): FormikErrors<IConvertFormProps> => {
+    const validateForm = (values: IConvertFormValues): FormikErrors<IConvertFormValues> => {
         return values.sourceCurrency !== USD && values.targetCurrency != USD ? { validationError: 'One of the currency has to be ' + USD } : {}
     }
 
     return (
-        <Formik<IConvertFormProps>
+        <Formik<IConvertFormValues>
             initialValues={initialValues}
             validate={validateForm}
             onSubmit={async (values) => await convertAmount(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
@@ -126,19 +148,19 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                     value={values.sourceAmount}
                                     maxDecimalCount={config.maxDecimals}
                                     onChange={(amount => setFieldValue('sourceAmount', amount))} />
-                                <SelectNative
+                                <SelectCurrency
                                     label='Source Currency'
                                     name='sourceCurrency'
-                                    value={toSelectOption(values.sourceCurrency)}
-                                    options={allCurrencyOptions}
-                                    onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency?.value)} />
-                                <SelectNative
+                                    currency={values.sourceCurrency}
+                                    currencies={supportedCurrencies}
+                                    onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
+                                <SelectCurrency
                                     label='Target Currency'
                                     name='targetCurrency'
                                     disabled={status.code === 'pending'}
-                                    value={toSelectOption(values.targetCurrency)}
-                                    options={allCurrencyOptions}
-                                    onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency?.value)} />
+                                    currency={values.targetCurrency}
+                                    currencies={supportedCurrencies}
+                                    onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
                                 <Button
                                     icon="play-circle"
                                     iconAlignment='right'
@@ -155,7 +177,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                             {status.code === 'converted' && <ResultAmount amount={status.result} currency={status.currency} />}
                             {errors.validationError && <Notice colorTheme="warning">{errors.validationError}</Notice>}
                         </Box>
-                        {status.code === 'failed' && <Notice colorTheme="error"> {status.reason}</Notice>}
+                        {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
                     </Flex>
                 )
             }}
