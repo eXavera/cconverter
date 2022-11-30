@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { object, string, number } from 'yup'
 
-import { ConversionResult } from '../../../../Common/types'
+import { ConversionResult, Currency } from '../../../../Common/types'
 import { handleErrorsOf } from '../../../../ErrorHandling/ApiErrorHandler'
 import * as ExchangeRateApi from '../../../../ExchangeRateApi'
+import * as Stats from '../../../../Stats/Repository'
 
 const requestParamsSchema = object({
   sourceCurrency: string().required().length(3).uppercase(),
@@ -19,6 +20,12 @@ const requestHandler = handleErrorsOf(async function (httpReq: NextApiRequest, h
   })
   
   const convertedAmount: number = await ExchangeRateApi.convert(reqParams.sourceCurrency, reqParams.targetCurrency, reqParams.amount)
+
+  // this is not essential, don't waint for the completion
+  Stats.recordConversion(
+    { currency: reqParams.sourceCurrency, amount: reqParams.amount },
+    { currency: reqParams.targetCurrency, amount: convertedAmount })
+
   httpResp.status(200).json({
     amount: convertedAmount
   })

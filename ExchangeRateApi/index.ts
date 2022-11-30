@@ -9,18 +9,18 @@ const throwIfNotOK = function (httpRespStatus: number): void | never {
     }
 }
 
-const getUsdRate = async function (targetCurrency: Currency): Promise<number> {
+const getUsdBaseRates = async function (targetCurrencies: Currency[]): Promise<Record<Currency, number>> {
     const httpReqParams = new URLSearchParams([
         ['app_id', process.env.OPEN_EX_RATES_APPID as string],
         ['base', USD],
-        ['symbols', targetCurrency]
+        ['symbols', targetCurrencies.join(',')]
     ])
 
     const httpResp: Response = await fetch('https://openexchangerates.org/api/latest.json?' + httpReqParams.toString())
     throwIfNotOK(httpResp.status)
 
      const respBody = await httpResp.json() as { rates: Record<Currency, number> }
-    return respBody.rates[targetCurrency]
+    return respBody.rates
 }
 
 export async function convert(source: Currency, target: Currency, amount: number): Promise<number> {
@@ -28,12 +28,17 @@ export async function convert(source: Currency, target: Currency, amount: number
         return amount
     }
     else if (source === USD) {
-        return amount * await getUsdRate(target)
+        return amount * (await getUsdBaseRates([target]))[target]
     }
     else if (target === USD) {
-        return amount / await getUsdRate(source)
+        return amount / (await getUsdBaseRates([source]))[source]
     }
-    throw new Error('One of the currency has to be USD, becuse of the free account limitations')
+    else {
+        const rates = await getUsdBaseRates([source, target])
+        const usdAmount = amount / rates[source]
+        return usdAmount * rates[target]
+    }
+    //throw new Error('One of the currency has to be USD, becuse of the free account limitations')
 }
 
 export async function getAvailableCurrencies(): Promise<Currency[]> {

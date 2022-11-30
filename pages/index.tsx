@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { GetServerSideProps } from 'next'
-import { Form, Formik, FormikErrors } from 'formik'
+import { Form, Formik } from 'formik'
 import {
     Flex,
     NumberInput,
@@ -11,17 +11,17 @@ import {
     Text,
     Spinner,
     Notice,
-    SelectNativeProps
+    SelectNativeProps,
+    Link
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
 import { ConversionResult, Currency } from '../Common/types'
 import * as ExchangeRateApi from '../ExchangeRateApi'
+//import Link from 'next/link'
 
 const config = {
     maxDecimals: 2
 }
-
-const USD: Currency = 'USD'
 
 type ConversionStatus =
     { code: 'ready' } |
@@ -80,12 +80,30 @@ interface IPageProps {
 interface IConvertFormValues {
     sourceAmount: number,
     sourceCurrency: Currency,
-    targetCurrency: Currency,
-    validationError?: string
+    targetCurrency: Currency
 }
 
 const ResultAmount: React.FC<{ amount: number, currency: Currency }> = (props) => {
-    return <Text size="large"> = {props.amount.toFixed(config.maxDecimals)} {props.currency}</Text>
+    const currencyFormatter: Intl.NumberFormat = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: props.currency
+    });
+
+    return (
+        <Flex>
+            <Flex alignItems="center">
+                <Text size="large"> = {currencyFormatter.format(props.amount)}</Text>
+            </Flex>
+            <Button
+                title="Copy to clipboard"
+                size="small"
+                icon="copy"
+                colorTheme="info"
+                minimal
+                ml="1em"
+                onClick={() => navigator.clipboard.writeText(props.amount.toFixed(config.maxDecimals))}></Button>
+        </Flex>
+    )
 }
 
 interface SelectCurrencyProps extends Omit<SelectNativeProps, "onChange"> {
@@ -122,66 +140,78 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
 
     const initialValues: IConvertFormValues = {
         sourceAmount: 0,
-        sourceCurrency: USD,
-        targetCurrency: USD
-    }
-
-    const validateForm = (values: IConvertFormValues): FormikErrors<IConvertFormValues> => {
-        return values.sourceCurrency !== USD && values.targetCurrency != USD ? { validationError: 'One of the currency has to be ' + USD } : {}
+        sourceCurrency: 'USD',
+        targetCurrency: 'EUR'
     }
 
     return (
-        <Formik<IConvertFormValues>
-            initialValues={initialValues}
-            validate={validateForm}
-            onSubmit={async (values) => await convertAmount(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
-            {(props): React.ReactNode => {
-                const { values, setFieldValue, handleSubmit, errors } = props;
+        <>
+            <Formik<IConvertFormValues>
+                initialValues={initialValues}
+                onSubmit={async (values) => await convertAmount(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
+                {(props): React.ReactNode => {
+                    const { values, setFieldValue, handleSubmit, errors } = props;
 
-                return (
-                    <Flex alignItems="stretch" flexDirection="column">
-                        <Form onSubmit={handleSubmit}>
-                            <Flex mt="2em" mb="1em">
-                                <NumberInput
-                                    label='Source Amount'
-                                    name='sourceAmount'
-                                    value={values.sourceAmount}
-                                    maxDecimalCount={config.maxDecimals}
-                                    onChange={(amount => setFieldValue('sourceAmount', amount))} />
-                                <SelectCurrency
-                                    label='Source Currency'
-                                    name='sourceCurrency'
-                                    currency={values.sourceCurrency}
-                                    currencies={supportedCurrencies}
-                                    onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
-                                <SelectCurrency
-                                    label='Target Currency'
-                                    name='targetCurrency'
-                                    disabled={status.code === 'pending'}
-                                    currency={values.targetCurrency}
-                                    currencies={supportedCurrencies}
-                                    onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
-                                <Button
-                                    icon="play-circle"
-                                    iconAlignment='right'
-                                    type="submit"
-                                    loading={status.code === 'pending'}
-                                    disabled={status.code === 'pending'}
-                                    ml="1em">
-                                    Convert
-                                </Button>
-                            </Flex>
-                        </Form>
-                        <Box mt="1em" mb="1em">
-                            {status.code === 'pending' && <Spinner size="large" />}
-                            {status.code === 'converted' && <ResultAmount amount={status.result} currency={status.currency} />}
-                            {errors.validationError && <Notice colorTheme="warning">{errors.validationError}</Notice>}
-                        </Box>
-                        {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
-                    </Flex>
-                )
-            }}
-        </Formik>
+                    return (
+                        <Flex alignItems="stretch" flexDirection="column">
+                            <Form onSubmit={handleSubmit}>
+                                <Flex mt="2em" mb="1em">
+                                    <NumberInput
+                                        label='Source Amount'
+                                        name='sourceAmount'
+                                        value={values.sourceAmount}
+                                        maxDecimalCount={config.maxDecimals}
+                                        onChange={(amount => setFieldValue('sourceAmount', amount))} />
+                                    <SelectCurrency
+                                        label='Source Currency'
+                                        name='sourceCurrency'
+                                        currency={values.sourceCurrency}
+                                        currencies={supportedCurrencies}
+                                        onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
+                                    <Button
+                                        icon="transfer"
+                                        colorTheme='info'
+                                        size="tiny"
+                                        title="Swap"
+                                        minimal
+                                        iconAlignment="right"
+                                        type="button"
+                                        disabled={status.code === 'pending'}
+                                        onClick={() => {
+                                            const { sourceCurrency, targetCurrency } = values;
+                                            setFieldValue('sourceCurrency', targetCurrency)
+                                            setFieldValue('targetCurrency', sourceCurrency)
+                                        }}>
+                                    </Button>
+                                    <SelectCurrency
+                                        label='Target Currency'
+                                        name='targetCurrency'
+                                        disabled={status.code === 'pending'}
+                                        currency={values.targetCurrency}
+                                        currencies={supportedCurrencies}
+                                        onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
+                                    <Button
+                                        icon="play-circle"
+                                        iconAlignment='right'
+                                        type="submit"
+                                        loading={status.code === 'pending'}
+                                        disabled={status.code === 'pending'}
+                                        ml="1em">
+                                        Convert
+                                    </Button>
+                                </Flex>
+                            </Form>
+                            <Box mt="1em" mb="1em">
+                                {status.code === 'pending' && <Spinner size="large" />}
+                                {status.code === 'converted' && <ResultAmount amount={status.result} currency={status.currency} />}
+                            </Box>
+                            {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
+                        </Flex>
+                    )
+                }}
+            </Formik>
+            <Link href="/stats" iconAlignment="left" icon="list">Show me some stats!</Link>
+        </>
     )
 }
 
