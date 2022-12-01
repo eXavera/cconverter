@@ -1,10 +1,5 @@
 import { MongoClient, ServerApiVersion, Document as MongoDocument, Collection } from 'mongodb'
-import { Currency, CurrencyPairStats } from '../Common/types'
-
-interface Money {
-    amount: number,
-    currency: Currency
-}
+import { Currency, CurrencyPairStats, Money } from '../Common/types'
 
 interface ConversionRecord extends MongoDocument {
     source: Money,

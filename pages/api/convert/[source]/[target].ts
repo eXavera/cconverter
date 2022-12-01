@@ -23,11 +23,11 @@ const requestHandler = handleErrorsOf(async function (httpReq: NextApiRequest, h
 
   // this is not essential, don't waint for the completion
   Stats.recordConversion(
-    { currency: reqParams.sourceCurrency, amount: reqParams.amount },
-    { currency: reqParams.targetCurrency, amount: convertedAmount })
+    { currency: reqParams.sourceCurrency, value: reqParams.amount },
+    { currency: reqParams.targetCurrency, value: convertedAmount })
 
   httpResp.status(200).json({
-    amount: convertedAmount
+    value: convertedAmount
   })
 })
 

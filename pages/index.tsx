@@ -4,20 +4,20 @@ import { Form, Formik } from 'formik'
 import {
     Flex,
     NumberInput,
-    SelectOption,
-    SelectNative,
     Button,
     Box,
     Text,
     Spinner,
     Notice,
-    SelectNativeProps,
-    Link
+    Link,
+    Tooltip
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
-import { ConversionResult, Currency } from '../Common/types'
+import { ConversionResult, Currency, Money } from '../Common/types'
 import * as ExchangeRateApi from '../ExchangeRateApi'
-//import Link from 'next/link'
+import { SelectCurrency } from '../components/SelectCurrency'
+import delay from '../Common/Delay'
+import { formatMoney } from '../Common/NumberFormatting'
 
 const config = {
     maxDecimals: 2
@@ -26,12 +26,12 @@ const config = {
 type ConversionStatus =
     { code: 'ready' } |
     { code: 'pending' } |
-    { code: 'converted', result: number, currency: Currency } |
+    { code: 'converted', resultAmount: Money } |
     { code: 'failed', reason: string }
 
 type ConversionApi = {
     status: ConversionStatus,
-    convertAmount: (source: Currency, target: Currency, amount: number) => Promise<void>
+    convertAmount: (sourceAmount: Money, target: Currency) => Promise<void>
 }
 
 const useConvertApi = function (): ConversionApi {
@@ -39,12 +39,11 @@ const useConvertApi = function (): ConversionApi {
 
     return {
         status,
-        convertAmount: async (source: Currency, target: Currency, amount: number) => {
-            if (amount === 0) {
+        convertAmount: async (sourceAmount: Money, target: Currency) => {
+            if (sourceAmount.value === 0) {
                 setStatus({
                     code: 'converted',
-                    result: amount,
-                    currency: target
+                    resultAmount: sourceAmount
                 })
                 return
             }
@@ -54,13 +53,15 @@ const useConvertApi = function (): ConversionApi {
             const factor: number = Math.pow(10, config.maxDecimals)
 
             const encode = encodeURIComponent;
-            const httpResp = await fetch(`/api/convert/${encode(source)}/${encode(target)}?amount=${(amount * factor).toFixed(0)}`)
+            const httpResp = await fetch(`/api/convert/${encode(sourceAmount.currency)}/${encode(target)}?amount=${(sourceAmount.value * factor).toFixed(0)}`)
             if (httpResp.status === 200) {
                 const convResp = await httpResp.json() as ConversionResult
                 setStatus({
                     code: 'converted',
-                    result: Math.round(convResp.amount) / factor,
-                    currency: target
+                    resultAmount: {
+                        value: Math.round(convResp.value) / factor,
+                        currency: target
+                    }
                 })
             }
             else {
@@ -83,55 +84,29 @@ interface IConvertFormValues {
     targetCurrency: Currency
 }
 
-const ResultAmount: React.FC<{ amount: number, currency: Currency }> = (props) => {
-    const currencyFormatter: Intl.NumberFormat = new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: props.currency
-    });
+const ResultAmount: React.FC<{ amount: Money }> = ({ amount }) => {
+    const [copyTooltipVisible, setCopyTooltipVisible] = useState<boolean>(false)
 
     return (
         <Flex>
             <Flex alignItems="center">
-                <Text size="large"> = {currencyFormatter.format(props.amount)}</Text>
+                <Text size="large"> &#61; {formatMoney(amount)}</Text>
             </Flex>
-            <Button
-                title="Copy to clipboard"
-                size="small"
-                icon="copy"
-                colorTheme="info"
-                minimal
-                ml="1em"
-                onClick={() => navigator.clipboard.writeText(props.amount.toFixed(config.maxDecimals))}></Button>
+            <Tooltip content="Copied!" visible={copyTooltipVisible}>
+                <Button
+                    title="Copy to clipboard"
+                    size="small"
+                    icon="copy"
+                    colorTheme="info"
+                    minimal
+                    onClick={async () => {
+                        await navigator.clipboard.writeText(amount.value.toFixed(config.maxDecimals))
+                        setCopyTooltipVisible(true)
+                        await delay(1000)
+                        setCopyTooltipVisible(false)
+                    }} />
+            </Tooltip>
         </Flex>
-    )
-}
-
-interface SelectCurrencyProps extends Omit<SelectNativeProps, "onChange"> {
-    currency: Currency,
-    currencies: Currency[]
-    onChange: (value: Currency | null) => void
-}
-
-const SelectCurrency: React.FC<SelectCurrencyProps> = ({
-    currency,
-    currencies,
-    onChange: onChange,
-    ...props
-}) => {
-    const toSelectOption = (currency: Currency): SelectOption => {
-        return {
-            value: currency,
-            label: currency
-        }
-    }
-
-    return (
-        <SelectNative
-            value={toSelectOption(currency)}
-            options={currencies.map(toSelectOption)}
-            onChange={selectedValue => onChange(selectedValue?.value as Currency)}
-            {...props}
-        />
     )
 }
 
@@ -148,7 +123,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
         <>
             <Formik<IConvertFormValues>
                 initialValues={initialValues}
-                onSubmit={async (values) => await convertAmount(values.sourceCurrency, values.targetCurrency, values.sourceAmount)}>
+                onSubmit={async (values) => await convertAmount({ value: values.sourceAmount, currency: values.sourceCurrency }, values.targetCurrency)}>
                 {(props): React.ReactNode => {
                     const { values, setFieldValue, handleSubmit, errors } = props;
 
@@ -203,7 +178,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                             </Form>
                             <Box mt="1em" mb="1em">
                                 {status.code === 'pending' && <Spinner size="large" />}
-                                {status.code === 'converted' && <ResultAmount amount={status.result} currency={status.currency} />}
+                                {status.code === 'converted' && <ResultAmount amount={status.resultAmount} />}
                             </Box>
                             {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
                         </Flex>

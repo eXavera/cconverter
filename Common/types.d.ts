@@ -1,7 +1,12 @@
 export type Currency = string
 
+export interface Money {
+    value: number,
+    currency: Currency
+}
+
 export type ConversionResult = {
-    amount: number
+    value: number
 }
 
 export interface CurrencyPairStats {
