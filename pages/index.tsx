@@ -10,7 +10,8 @@ import {
     Spinner,
     Notice,
     Link,
-    Tooltip
+    Tooltip,
+    LinkButton
 } from '@purple/phoenix-components'
 import { ILayoutProps } from '../components/layout'
 import { ConversionResult, Currency, Money } from '../Common/types'
@@ -18,10 +19,7 @@ import * as ExchangeRateApi from '../ExchangeRateApi'
 import { SelectCurrency } from '../components/SelectCurrency'
 import delay from '../Common/Delay'
 import { formatMoney } from '../Common/NumberFormatting'
-
-const config = {
-    maxDecimals: 2
-}
+import { ConvertForm as Config } from '../Common/Config'
 
 type ConversionStatus =
     { code: 'ready' } |
@@ -50,7 +48,7 @@ const useConvertApi = function (): ConversionApi {
 
             setStatus({ code: 'pending' })
 
-            const factor: number = Math.pow(10, config.maxDecimals)
+            const factor: number = Math.pow(10, Config.maxDecimals)
 
             const encode = encodeURIComponent;
             const httpResp = await fetch(`/api/convert/${encode(sourceAmount.currency)}/${encode(target)}?amount=${(sourceAmount.value * factor).toFixed(0)}`)
@@ -93,14 +91,14 @@ const ResultAmount: React.FC<{ amount: Money }> = ({ amount }) => {
                 <Text size="large"> &#61; {formatMoney(amount)}</Text>
             </Flex>
             <Tooltip content="Copied!" visible={copyTooltipVisible}>
-                <Button
+                <LinkButton
                     title="Copy to clipboard"
                     size="small"
                     icon="copy"
                     colorTheme="info"
                     minimal
                     onClick={async () => {
-                        await navigator.clipboard.writeText(amount.value.toFixed(config.maxDecimals))
+                        await navigator.clipboard.writeText(amount.value.toFixed(Config.maxDecimals))
                         setCopyTooltipVisible(true)
                         await delay(1000)
                         setCopyTooltipVisible(false)
@@ -135,7 +133,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                         label='Source Amount'
                                         name='sourceAmount'
                                         value={values.sourceAmount}
-                                        maxDecimalCount={config.maxDecimals}
+                                        maxDecimalCount={Config.maxDecimals}
                                         onChange={(amount => setFieldValue('sourceAmount', amount))} />
                                     <SelectCurrency
                                         label='Source Currency'
@@ -143,7 +141,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                         currency={values.sourceCurrency}
                                         currencies={supportedCurrencies}
                                         onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
-                                    <Button
+                                    <LinkButton
                                         icon="transfer"
                                         colorTheme='info'
                                         size="tiny"
@@ -156,8 +154,7 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                             const { sourceCurrency, targetCurrency } = values;
                                             setFieldValue('sourceCurrency', targetCurrency)
                                             setFieldValue('targetCurrency', sourceCurrency)
-                                        }}>
-                                    </Button>
+                                        }} />
                                     <SelectCurrency
                                         label='Target Currency'
                                         name='targetCurrency'

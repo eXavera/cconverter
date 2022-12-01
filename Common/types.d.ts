@@ -1,4 +1,5 @@
 export type Currency = string
+export type LogLevel = 'trace' | 'info' | 'warn' | 'error'
 
 export interface Money {
     value: number,

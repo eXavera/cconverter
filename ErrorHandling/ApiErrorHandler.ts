@@ -1,6 +1,9 @@
 import { EOL } from 'os'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ValidationError } from 'yup'
+import { createLogger, Logger } from '../Common/Logging'
+
+const log: Logger = createLogger('API error handler')
 
 type RequestHandler<TResp> = (req: NextApiRequest, res: NextApiResponse<TResp>) => Promise<void>
 
@@ -12,9 +15,11 @@ export function handleErrorsOf<TResp>(apiReqHandler: RequestHandler<TResp>): Req
 		}
 		catch (error: any) {
 			if (error instanceof ValidationError) {
+				log.warn('failed to validate params of API call %s', req.url, error.errors)
 				res.status(400).send(error.errors.join(EOL))
 			}
 			else {
+				log.error('failed to process API call %s', req.url, error)
 				res.status(500).send(error.toString())
 			}
 		}
