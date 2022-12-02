@@ -4,13 +4,18 @@ import { ThemeProvider } from 'styled-components'
 import {
     Theme as PhoenixTheme,
     GlobalStyles,
-    Flex,
     Heading
 } from '@purple/phoenix-components'
+import styled from 'styled-components'
 
-export interface ILayoutProps extends React.PropsWithChildren{
+export interface ILayoutProps extends React.PropsWithChildren {
     title: string
 }
+
+const StyledMain = styled.main`
+    width: fit-content;
+    margin: 0 auto;
+`
 
 export const Layout: React.FunctionComponent<ILayoutProps> = (props) => {
     return (
@@ -19,12 +24,10 @@ export const Layout: React.FunctionComponent<ILayoutProps> = (props) => {
             <Head>
                 <title>CConverter</title>
             </Head>
-            <main>
-                <Flex alignItems="center" flexDirection="column">
-                    <Heading>{ props.title }</Heading>
-                    { props.children }
-                </Flex>
-            </main>
+            <StyledMain>
+                <Heading textAlign="center">{props.title}</Heading>
+                {props.children}
+            </StyledMain>
         </ThemeProvider >
     )
 }

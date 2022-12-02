@@ -5,16 +5,21 @@ import { CurrencyPairStats } from '../Common/types'
 import { ILayoutProps } from '../components/layout'
 import { queryStats } from '../Stats/Repository'
 import { formatMoney } from '../Common/NumberFormatting'
+import styled from 'styled-components'
 
 interface IPageProps {
     currencyPairs: CurrencyPairStats[]
 }
 
+const StyledCard = styled(Card)`
+    width: fit-content;
+`
+
 const CurrencyPairBox: React.FC<{ pair: CurrencyPairStats }> = ({ pair }) => {
     const noDecimals = 0;
 
     return (
-        <Card p="l" mb="s">
+        <StyledCard p="l" mb="s">
             <Flex>
                 <Flex alignItems="center">
                     <Text size="large">{pair.source} &rarr; {pair.target}</Text>
@@ -22,7 +27,7 @@ const CurrencyPairBox: React.FC<{ pair: CurrencyPairStats }> = ({ pair }) => {
                 <Tag ml="xxs">{pair.count}&#215;</Tag>
             </Flex>
             <Text size="small">{formatMoney({ value: pair.totalTargetAmount, currency: pair.target }, noDecimals)} in total</Text>
-        </Card>
+        </StyledCard>
     )
 }
 

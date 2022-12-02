@@ -20,6 +20,7 @@ import { SelectCurrency } from '../components/SelectCurrency'
 import delay from '../Common/Delay'
 import { formatMoney } from '../Common/NumberFormatting'
 import { ConvertForm as Config } from '../Common/Config'
+import styled from 'styled-components'
 
 type ConversionStatus =
     { code: 'ready' } |
@@ -108,6 +109,19 @@ const ResultAmount: React.FC<{ amount: Money }> = ({ amount }) => {
     )
 }
 
+const FormLayoutBox = styled(Flex)`
+    flex-direction: column;
+    gap: 1em;
+    margin-top: 2em;
+    @media (min-width: 768px) {
+        flex-direction: row;
+    }
+`
+
+const CurrenciesBox = styled(Flex)`
+    flex-shrink: 0;
+`
+
 const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
     const { status, convertAmount }: ConversionApi = useConvertApi()
 
@@ -126,54 +140,55 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                     const { values, setFieldValue, handleSubmit, errors } = props;
 
                     return (
-                        <Flex alignItems="stretch" flexDirection="column">
+                        <Flex alignItems="stretch" flexDirection="column" gap="20px">
                             <Form onSubmit={handleSubmit}>
-                                <Flex mt="2em" mb="1em">
+                                <FormLayoutBox>
                                     <NumberInput
                                         label='Source Amount'
                                         name='sourceAmount'
                                         value={values.sourceAmount}
                                         maxDecimalCount={Config.maxDecimals}
                                         onChange={(amount => setFieldValue('sourceAmount', amount))} />
-                                    <SelectCurrency
-                                        label='Source Currency'
-                                        name='sourceCurrency'
-                                        currency={values.sourceCurrency}
-                                        currencies={supportedCurrencies}
-                                        onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
-                                    <LinkButton
-                                        icon="transfer"
-                                        colorTheme='info'
-                                        size="tiny"
-                                        title="Swap"
-                                        minimal
-                                        iconAlignment="right"
-                                        type="button"
-                                        disabled={status.code === 'pending'}
-                                        onClick={() => {
-                                            const { sourceCurrency, targetCurrency } = values;
-                                            setFieldValue('sourceCurrency', targetCurrency)
-                                            setFieldValue('targetCurrency', sourceCurrency)
-                                        }} />
-                                    <SelectCurrency
-                                        label='Target Currency'
-                                        name='targetCurrency'
-                                        disabled={status.code === 'pending'}
-                                        currency={values.targetCurrency}
-                                        currencies={supportedCurrencies}
-                                        onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
+                                    <CurrenciesBox>
+                                        <SelectCurrency
+                                            label='Source'
+                                            name='sourceCurrency'
+                                            currency={values.sourceCurrency}
+                                            currencies={supportedCurrencies}
+                                            onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
+                                        <LinkButton
+                                            icon="transfer"
+                                            colorTheme='info'
+                                            size="tiny"
+                                            title="Swap"
+                                            minimal
+                                            iconAlignment="right"
+                                            type="button"
+                                            disabled={status.code === 'pending'}
+                                            onClick={() => {
+                                                const { sourceCurrency, targetCurrency } = values;
+                                                setFieldValue('sourceCurrency', targetCurrency)
+                                                setFieldValue('targetCurrency', sourceCurrency)
+                                            }} />
+                                        <SelectCurrency
+                                            label='Target'
+                                            name='targetCurrency'
+                                            disabled={status.code === 'pending'}
+                                            currency={values.targetCurrency}
+                                            currencies={supportedCurrencies}
+                                            onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
+                                    </CurrenciesBox>
                                     <Button
                                         icon="play-circle"
                                         iconAlignment='right'
                                         type="submit"
                                         loading={status.code === 'pending'}
-                                        disabled={status.code === 'pending'}
-                                        ml="1em">
+                                        disabled={status.code === 'pending'}>
                                         Convert
                                     </Button>
-                                </Flex>
+                                </FormLayoutBox>
                             </Form>
-                            <Box mt="1em" mb="1em">
+                            <Box mb="1em">
                                 {status.code === 'pending' && <Spinner size="large" />}
                                 {status.code === 'converted' && <ResultAmount amount={status.resultAmount} />}
                             </Box>
