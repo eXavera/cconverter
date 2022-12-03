@@ -9,7 +9,7 @@ const requestParamsSchema = object({
     amount: number().required()
 })
 
-const handler = async (requestParams: Record<string, any>): Promise<ConversionResponse> => {
+const conversionHandler = async (requestParams: Record<string, any>): Promise<ConversionResponse> => {
     const validParams = await requestParamsSchema.validate({
         sourceCurrency: requestParams['source'],
         targetCurrency: requestParams['target'],
@@ -28,4 +28,4 @@ const handler = async (requestParams: Record<string, any>): Promise<ConversionRe
     }
 }
 
-export default handler
+export default conversionHandler
