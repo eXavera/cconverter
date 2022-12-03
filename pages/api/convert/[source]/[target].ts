@@ -1,34 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { object, string, number } from 'yup'
+import { handleErrorsOf } from '../../../../common/ApiErrorHandler'
 
-import { ConversionResult, Currency } from '../../../../Common/types'
-import { handleErrorsOf } from '../../../../ErrorHandling/ApiErrorHandler'
-import * as ExchangeRateApi from '../../../../ExchangeRateApi'
-import * as Stats from '../../../../Stats/Repository'
+import { ConversionResponse } from '../../../../features/conversion/api/ConversionResponse'
+import apiHandler from '../../../../features/conversion/api/Handler'
 
-const requestParamsSchema = object({
-  sourceCurrency: string().required().length(3).uppercase(),
-  targetCurrency: string().required().length(3).uppercase(),
-  amount: number().required()
-})
-
-const requestHandler = handleErrorsOf(async function (httpReq: NextApiRequest, httpResp: NextApiResponse<ConversionResult>) {
-  const reqParams = await requestParamsSchema.validate({
-    sourceCurrency: httpReq.query['source'],
-    targetCurrency: httpReq.query['target'],
-    amount: httpReq.query['amount']
-  })
-  
-  const convertedAmount: number = await ExchangeRateApi.convert(reqParams.sourceCurrency, reqParams.targetCurrency, reqParams.amount)
-
-  // this is not essential, don't waint for the completion
-  Stats.recordConversion(
-    { currency: reqParams.sourceCurrency, value: reqParams.amount },
-    { currency: reqParams.targetCurrency, value: convertedAmount })
-
-  httpResp.status(200).json({
-    value: convertedAmount
-  })
+const requestHandler = handleErrorsOf(async function (httpReq: NextApiRequest, httpResp: NextApiResponse<ConversionResponse>) {
+  const resp = await apiHandler(httpReq.query)
+  httpResp.status(200).json(resp)
 })
 
 export default requestHandler

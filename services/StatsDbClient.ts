@@ -1,6 +1,8 @@
 import { MongoClient, ServerApiVersion, Document as MongoDocument, Collection } from 'mongodb'
-import { Currency, CurrencyPairStats, Money } from '../Common/types'
-import { createLogger, Logger } from '../Common/Logging'
+import { createLogger, Logger } from '../common/logging'
+import { Currency } from '../common/types/Currency'
+import { Money } from '../common/types/Money'
+import { CurrencyPairStats } from '../features/stats/CurrencyPairStats'
 
 const log: Logger = createLogger('stats MongoDB client')
 
@@ -41,7 +43,7 @@ interface AggregationResult {
     targetSum: number
 }
 
-export const queryStats = async (): Promise<CurrencyPairStats[]> => {
+export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[]> => {
     const records = await magic<AggregationResult[]>(async conversions => {
         log.trace('running aggregation')
         const cursor = conversions.aggregate<AggregationResult>([

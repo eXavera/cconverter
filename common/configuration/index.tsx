@@ -1,5 +1,5 @@
-import * as config from '../config.json'
-import { LogLevel } from './types'
+import * as config from '../../config.json'
+import { LogLevel } from '../logging/LogLevel'
 
 const rawConfig: any = config
 

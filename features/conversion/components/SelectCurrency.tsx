@@ -1,5 +1,5 @@
 import { SelectNative, SelectNativeProps, SelectOption } from "@purple/phoenix-components"
-import { Currency } from "../Common/types"
+import { Currency } from '../../../common/types/Currency'
 
 interface SelectCurrencyProps extends Omit<SelectNativeProps, "onChange"> {
     currency: Currency,

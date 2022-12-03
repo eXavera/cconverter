@@ -1,10 +1,10 @@
-import { Currency } from '../Common/types'
-import { createLogger, Logger } from '../Common/Logging'
-import { ExchangeRateApi as Config } from '../Common/Config'
+import { Currency } from '../common/types/Currency'
+import { ExchangeRateApi as Config } from '../common/configuration'
 import NodeCache from 'node-cache'
 import { wrap } from 'lodash'
+import { createLogger, Logger } from '../common/logging'
 
-const log: Logger = createLogger('ExchangeRateApi')
+const log: Logger = createLogger('ExchangeRateApiClient')
 
 const USD: Currency = 'USD'
 

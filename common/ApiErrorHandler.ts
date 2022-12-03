@@ -1,7 +1,7 @@
 import { EOL } from 'os'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { ValidationError } from 'yup'
-import { createLogger, Logger } from '../Common/Logging'
+import { createLogger, Logger } from '../common/logging'
 
 const log: Logger = createLogger('API error handler')
 

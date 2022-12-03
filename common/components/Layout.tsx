@@ -8,16 +8,16 @@ import {
 } from '@purple/phoenix-components'
 import styled from 'styled-components'
 
-export interface ILayoutProps extends React.PropsWithChildren {
-    title: string
-}
-
 const StyledMain = styled.main`
     width: fit-content;
     margin: 0 auto;
 `
 
-export const Layout: React.FunctionComponent<ILayoutProps> = (props) => {
+export interface LayoutProps extends React.PropsWithChildren {
+    title: string
+}
+
+export const Layout: React.FunctionComponent<LayoutProps> = (props) => {
     return (
         <ThemeProvider theme={PhoenixTheme}>
             <GlobalStyles />

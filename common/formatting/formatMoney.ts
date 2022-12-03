@@ -1,4 +1,4 @@
-import { Money } from "./types";
+import { Money } from "../types/Money";
 
 export function formatMoney(amount: Money, decimals: number = 2): string {
     // hardcoded en-US for now because of SSR issues https://github.com/vercel/next.js/discussions/19409

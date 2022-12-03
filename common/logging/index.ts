@@ -1,6 +1,6 @@
 import { colorConsole, Tracer } from 'tracer'
-import { Logging as Config } from '../Common/Config'
-import { LogLevel } from './types'
+import { Logging as Config } from '../configuration'
+import { LogLevel } from './LogLevel'
 
 const logger: Tracer.Logger<string> = colorConsole({
     level: Config.minLevel,
