@@ -1,11 +1,12 @@
 import React from 'react'
-import { Card, Flex, Link, Tag, Text } from '@purple/phoenix-components'
+import { Box, Card, Flex, Link, Tag, Text } from '@purple/phoenix-components'
 import { GetServerSideProps } from 'next'
 import { CurrencyPairStats } from '../Common/types'
 import { ILayoutProps } from '../components/layout'
 import { queryStats } from '../Stats/Repository'
 import { formatMoney } from '../Common/NumberFormatting'
 import styled from 'styled-components'
+import { InlineText } from '../components/InlineText'
 
 interface IPageProps {
     currencyPairs: CurrencyPairStats[]
@@ -15,29 +16,31 @@ const StyledCard = styled(Card)`
     width: fit-content;
 `
 
+const PairWithTagBox = styled(Box)`
+vertical-align: middle;
+`
+
 const CurrencyPairBox: React.FC<{ pair: CurrencyPairStats }> = ({ pair }) => {
     const noDecimals = 0;
 
     return (
         <StyledCard p="l" mb="s">
-            <Flex>
-                <Flex alignItems="center">
-                    <Text size="large">{pair.source} &rarr; {pair.target}</Text>
-                </Flex>
+            <PairWithTagBox>
+                <InlineText size="large">{pair.source} &rarr; {pair.target}</InlineText>
                 <Tag ml="xxs">{pair.count}&#215;</Tag>
-            </Flex>
-            <Text size="small">{formatMoney({ value: pair.totalTargetAmount, currency: pair.target }, noDecimals)} in total</Text>
+            </PairWithTagBox>
+            <Text size="small">{formatMoney({ value: pair.totalTargetAmount, currency: pair.target }, noDecimals)} total</Text>
         </StyledCard>
     )
 }
 
 const IndexPage: React.FC<IPageProps> = ({ currencyPairs }) => {
     return (
-        <Flex alignItems="stretch" flexDirection="column">
-            <Link href="/" iconAlignment="left" icon="arrow-left" mt="1em" mb="2em">Back to converter</Link>
-            <Text size="large" mb="s">Top pairs</Text>
+        <Box mt="s">
+            <Link href="/" iconAlignment="left" icon="arrow-left">Back to converter</Link>
+            <Text size="large" mb="s" mt="s">Top pairs</Text>
             {currencyPairs.map(pair => <CurrencyPairBox pair={pair} key={pair.source + pair.target} />)}
-        </Flex>
+        </Box>
     )
 }
 

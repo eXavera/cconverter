@@ -1,5 +1,8 @@
 import { Currency } from '../Common/types'
 import { createLogger, Logger } from '../Common/Logging'
+import { ExchangeRateApi as Config } from '../Common/Config'
+import NodeCache from 'node-cache'
+import { wrap } from 'lodash'
 
 const log: Logger = createLogger('ExchangeRateApi')
 
@@ -43,13 +46,28 @@ export async function convert(source: Currency, target: Currency, amount: number
     }
 }
 
-export async function getAvailableCurrencies(): Promise<Currency[]> {
-    
+const cache = new NodeCache()
+const cacheCurrencies = async (loadFunc: () => Promise<Currency[]>) : Promise<Currency[]> => {
+    const cacheKey = 'availableCurrencies'
+
+    const cachedCurrencies = cache.get<Currency[]>(cacheKey)
+    if (cachedCurrencies) {
+        log.trace('currencies loaded from cache')
+        return cachedCurrencies
+    }
+
+    const currencies = await loadFunc()
+    cache.set(cacheKey, currencies, Config.availableCurrenciesCache.timeoutSeconds)
+
+    return currencies
+}
+
+export const getAvailableCurrencies = wrap(async (): Promise<Currency[]> => {
     log.trace('requesting currencies')
     const httpResp: Response = await fetch(`https://openexchangerates.org/api/currencies.json`)
     throwIfNotOK(httpResp.status)
     
     type Label = string
-    const currencies = await httpResp.json() as Record<Currency, Label>
-    return Object.keys(currencies)
-}
+    const currenciesWithLabel = await httpResp.json() as Record<Currency, Label>
+    return Object.keys(currenciesWithLabel)
+}, cacheCurrencies)

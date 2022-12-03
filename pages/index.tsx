@@ -21,6 +21,7 @@ import delay from '../Common/Delay'
 import { formatMoney } from '../Common/NumberFormatting'
 import { ConvertForm as Config } from '../Common/Config'
 import styled from 'styled-components'
+import { InlineText } from '../components/InlineText'
 
 type ConversionStatus =
     { code: 'ready' } |
@@ -86,11 +87,13 @@ interface IConvertFormValues {
 const ResultAmount: React.FC<{ amount: Money }> = ({ amount }) => {
     const [copyTooltipVisible, setCopyTooltipVisible] = useState<boolean>(false)
 
+    const ResultBox = styled(Box)`
+    vertical-align: middle;
+    `
+
     return (
-        <Flex>
-            <Flex alignItems="center">
-                <Text size="large"> &#61; {formatMoney(amount)}</Text>
-            </Flex>
+        <ResultBox>
+            <InlineText size="large"> &#61; {formatMoney(amount)}</InlineText>
             <Tooltip content="Copied!" visible={copyTooltipVisible}>
                 <LinkButton
                     title="Copy to clipboard"
@@ -105,21 +108,27 @@ const ResultAmount: React.FC<{ amount: Money }> = ({ amount }) => {
                         setCopyTooltipVisible(false)
                     }} />
             </Tooltip>
-        </Flex>
+        </ResultBox>
     )
 }
 
+const FormContentBox = styled(Flex)`
+flex-direction: column;
+gap: 1em;
+margin-top: 2em;
+@media (min-width: 600px) {
+    flex-direction: row;
+}
+`
+
 const FormLayoutBox = styled(Flex)`
-    flex-direction: column;
-    gap: 1em;
-    margin-top: 2em;
-    @media (min-width: 768px) {
-        flex-direction: row;
-    }
+flex-direction: column;
+gap: 1em;
+
 `
 
 const CurrenciesBox = styled(Flex)`
-    flex-shrink: 0;
+flex-shrink: 0;
 `
 
 const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
@@ -140,9 +149,9 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                     const { values, setFieldValue, handleSubmit, errors } = props;
 
                     return (
-                        <Flex alignItems="stretch" flexDirection="column" gap="20px">
+                        <FormLayoutBox>
                             <Form onSubmit={handleSubmit}>
-                                <FormLayoutBox>
+                                <FormContentBox>
                                     <NumberInput
                                         label='Source Amount'
                                         name='sourceAmount'
@@ -164,7 +173,6 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                             minimal
                                             iconAlignment="right"
                                             type="button"
-                                            disabled={status.code === 'pending'}
                                             onClick={() => {
                                                 const { sourceCurrency, targetCurrency } = values;
                                                 setFieldValue('sourceCurrency', targetCurrency)
@@ -173,7 +181,6 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                         <SelectCurrency
                                             label='Target'
                                             name='targetCurrency'
-                                            disabled={status.code === 'pending'}
                                             currency={values.targetCurrency}
                                             currencies={supportedCurrencies}
                                             onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
@@ -186,14 +193,14 @@ const IndexPage: React.FC<IPageProps> = ({ supportedCurrencies }) => {
                                         disabled={status.code === 'pending'}>
                                         Convert
                                     </Button>
-                                </FormLayoutBox>
+                                </FormContentBox>
                             </Form>
                             <Box mb="1em">
                                 {status.code === 'pending' && <Spinner size="large" />}
                                 {status.code === 'converted' && <ResultAmount amount={status.resultAmount} />}
                             </Box>
                             {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
-                        </Flex>
+                        </FormLayoutBox>
                     )
                 }}
             </Formik>

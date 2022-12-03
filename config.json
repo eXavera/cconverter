@@ -1,5 +1,8 @@
 {
     "logging": {
         "minLevel": "trace"
+    },
+    "availableCurrenciesCache":{
+        "timeoutSeconds": 60
     }
 }
