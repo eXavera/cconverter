@@ -37,8 +37,8 @@ const accessConversions = async function <TResult>(accessor: ConversionsAccessor
 }
 
 export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[]> => {
-    const records = await accessConversions<AggregatedConversionsDocument[]>(async (conversions: Collection<ConversionDocument>) => {
-        log.trace('running aggregation')
+    const resultDocuments = await accessConversions<AggregatedConversionsDocument[]>(async (conversions: Collection<ConversionDocument>) => {
+        log.trace('running "most frequent conversions" aggregation')
         const resultCursor = conversions.aggregate<AggregatedConversionsDocument>([
             {
                 '$group': {
@@ -68,9 +68,9 @@ export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[
         }
     })
 
-    log.info('aggregation loaded')
+    log.info('aggregation "most frequent conversions" loaded')
 
-    return records.map(r => ({
+    return resultDocuments.map(r => ({
         source: r._id.source,
         target: r._id.target,
         count: r.count,
