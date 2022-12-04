@@ -1,8 +1,9 @@
-import { Currency } from '../common/types/Currency'
-import { ExchangeRateApi as Config } from '../common/configuration'
+import { Currency } from '../../common/types/Currency'
+import { ExchangeRateApi as Config } from '../../common/configuration'
 import NodeCache from 'node-cache'
 import { wrap } from 'lodash'
-import { createLogger, Logger } from '../common/logging'
+import { createLogger, Logger } from '../../common/logging'
+import * as FreeTierConstrainedConverter from './FreeTierConstrainedConverter'
 
 const log: Logger = createLogger('ExchangeRateApiClient')
 
@@ -29,21 +30,8 @@ const getUsdBaseRates = async function (targetCurrencies: Currency[]): Promise<R
     return respBody.rates
 }
 
-export async function convert(source: Currency, target: Currency, amount: number): Promise<number> {
-    if (source == target || amount === 0) {
-        return amount
-    }
-    else if (source === USD) {
-        return amount * (await getUsdBaseRates([target]))[target]
-    }
-    else if (target === USD) {
-        return amount / (await getUsdBaseRates([source]))[source]
-    }
-    else {
-        const rates = await getUsdBaseRates([source, target])
-        const usdAmount = amount / rates[source]
-        return usdAmount * rates[target]
-    }
+export function convert(source: Currency, target: Currency, amount: number): Promise<number> {
+    return FreeTierConstrainedConverter.convert(getUsdBaseRates, { currency: source, value: amount }, target)
 }
 
 const cache = new NodeCache()

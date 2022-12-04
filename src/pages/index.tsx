@@ -3,7 +3,7 @@ import { GetServerSideProps } from 'next'
 import { Link } from '@purple/phoenix-components'
 import { LayoutProps } from '../common/components/Layout'
 import { ConversionForm, ConversionFormProps } from '../features/conversion/Form'
-import * as ExchangeRateApiClient from '../services/ExchangeRateApiClient'
+import * as ExchangeRateApiClient from '../services/exchange-rate-api-client'
 
 type PageProps = ConversionFormProps
 

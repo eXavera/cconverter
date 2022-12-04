@@ -1,5 +1,5 @@
 import { object, string, number } from 'yup'
-import * as ExchangeRateApiClient from '../../../services/ExchangeRateApiClient'
+import * as ExchangeRateApiClient from '../../../services/exchange-rate-api-client'
 import * as StatsDbClient from '../../../services/StatsDbClient'
 import { ConversionResponse } from './ConversionResponse'
 

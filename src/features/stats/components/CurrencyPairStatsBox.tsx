@@ -5,7 +5,7 @@ import { formatMoney } from "../../../common/formatting/formatMoney";
 import { CurrencyPairStats } from "../CurrencyPairStats";
 
 const StyledCard = styled(Card)`
-    width: fit-content;
+width: fit-content;
 `
 
 const PairWithTagBox = styled(Box)`
