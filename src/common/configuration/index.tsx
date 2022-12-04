@@ -13,7 +13,7 @@ interface ExchangeRateApiConfig {
     }
 }
 
-interface ConvertFormConfig {
+interface ConversionFormConfig {
     maxDecimals: number
 }
 
@@ -27,6 +27,6 @@ export const ExchangeRateApi: Readonly<ExchangeRateApiConfig> = {
     }
 }
 
-export const ConvertForm: Readonly<ConvertFormConfig> = {
-    maxDecimals: rawConfig?.convertForm?.maxDecimals ?? 2
+export const ConversionForm: Readonly<ConversionFormConfig> = {
+    maxDecimals: rawConfig?.conversionForm?.maxDecimals ?? 2
 }

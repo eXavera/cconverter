@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Currency } from '../../common/types/Currency'
 import { Money } from '../../common/types/Money'
-import { ConvertForm as Config } from '../../common/configuration'
+import { ConversionForm as Config } from '../../common/configuration'
 import styled from 'styled-components'
 import {
     Box,

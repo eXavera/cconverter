@@ -5,7 +5,7 @@ import { InlineText } from '../../../common/components/InlineText'
 import { formatMoney } from '../../../common/formatting/formatMoney'
 import { Money } from '../../../common/types/Money'
 import delay from '../../../common/utils/Delay'
-import { ConvertForm as Config } from '../../../common/configuration'
+import { ConversionForm as Config } from '../../../common/configuration'
 
 const ResultBox = styled(Box)`
 vertical-align: middle;
@@ -16,7 +16,7 @@ export const ConversionResult: React.FC<{ amount: Money }> = ({ amount }) => {
 
     return (
         <ResultBox>
-            <InlineText size='large'> &#61; {formatMoney(amount)}</InlineText>
+            <InlineText size='large'> &#61; {formatMoney(amount, Config.maxDecimals)}</InlineText>
             <Tooltip content='Copied!' visible={copyTooltipVisible}>
                 <LinkButton
                     title='Copy to clipboard'

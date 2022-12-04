@@ -2,7 +2,10 @@
     "logging": {
         "minLevel": "trace"
     },
-    "availableCurrenciesCache":{
+    "availableCurrenciesCache": {
         "timeoutSeconds": 60
+    },
+    "conversionForm": {
+        "maxDecimals": 2
     }
 }
