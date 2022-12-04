@@ -1,9 +1,10 @@
 import { GetServerSideProps } from 'next'
 import { MostFrequestConversions, MostFrequestConversionsProps } from '../features/stats/MostFrequentConversions'
 import { LayoutProps } from '../common/components/Layout'
-import { queryMostFrequentConversions } from '../services/StatsDbClient'
+import { queryMostFrequentConversions } from '../services/stats-db-client'
 
-export default MostFrequestConversions
+const Page =  MostFrequestConversions
+export default Page
 
 export const getServerSideProps: GetServerSideProps<LayoutProps & MostFrequestConversionsProps> = async () => {
     return {

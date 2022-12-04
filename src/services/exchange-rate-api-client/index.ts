@@ -4,6 +4,7 @@ import NodeCache from 'node-cache'
 import { wrap } from 'lodash'
 import { createLogger, Logger } from '../../common/logging'
 import * as FreeTierConstrainedConverter from './FreeTierConstrainedConverter'
+import { Money } from '../../common/types/Money'
 
 const log: Logger = createLogger('ExchangeRateApiClient')
 
@@ -26,16 +27,12 @@ const getUsdBaseRates = async function (targetCurrencies: Currency[]): Promise<R
     const httpResp: Response = await fetch('https://openexchangerates.org/api/latest.json?' + httpReqParams.toString())
     throwIfNotOK(httpResp.status)
 
-     const respBody = await httpResp.json() as { rates: Record<Currency, number> }
+    const respBody = await httpResp.json() as { rates: Record<Currency, number> }
     return respBody.rates
 }
 
-export function convert(source: Currency, target: Currency, amount: number): Promise<number> {
-    return FreeTierConstrainedConverter.convert(getUsdBaseRates, { currency: source, value: amount }, target)
-}
-
 const cache = new NodeCache()
-const cacheCurrencies = async (loadFunc: () => Promise<Currency[]>) : Promise<Currency[]> => {
+const cacheAvailableCurrencies = async (loadFunc: () => Promise<Currency[]>) : Promise<Currency[]> => {
     const cacheKey = 'availableCurrencies'
 
     const cachedCurrencies = cache.get<Currency[]>(cacheKey)
@@ -50,6 +47,10 @@ const cacheCurrencies = async (loadFunc: () => Promise<Currency[]>) : Promise<Cu
     return currencies
 }
 
+export function convert(amount: Money, target: Currency): Promise<number> {
+    return FreeTierConstrainedConverter.convert(getUsdBaseRates, amount, target)
+}
+
 export const getAvailableCurrencies = wrap(async (): Promise<Currency[]> => {
     log.trace('requesting currencies')
     const httpResp: Response = await fetch(`https://openexchangerates.org/api/currencies.json`)
@@ -57,5 +58,8 @@ export const getAvailableCurrencies = wrap(async (): Promise<Currency[]> => {
     
     type Label = string
     const currenciesWithLabel = await httpResp.json() as Record<Currency, Label>
-    return Object.keys(currenciesWithLabel)
-}, cacheCurrencies)
+
+    const currencies = Object.keys(currenciesWithLabel)
+    currencies.sort()
+    return currencies
+}, cacheAvailableCurrencies)

@@ -2,8 +2,8 @@ import { Currency } from "../../common/types/Currency";
 import { Money } from "../../common/types/Money";
 
 type UsdBaseRatesLoader = (targets: Currency[]) => Promise<Record<Currency, number>>
-const USD: Currency = 'USD'
 
+const USD: Currency = 'USD'
 export const convert = async (loadUsdBaseRates: UsdBaseRatesLoader, sourceAmount: Money, targetCurrency: Currency) : Promise<number> => {
     if (sourceAmount.currency == targetCurrency || sourceAmount.value === 0) {
         return sourceAmount.value

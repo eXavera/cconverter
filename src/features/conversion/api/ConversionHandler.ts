@@ -1,6 +1,7 @@
 import { object, string, number } from 'yup'
+import { Money } from '../../../common/types/Money'
 import * as ExchangeRateApiClient from '../../../services/exchange-rate-api-client'
-import * as StatsDbClient from '../../../services/StatsDbClient'
+import * as StatsDbClient from '../../../services/stats-db-client'
 import { ConversionResponse } from './ConversionResponse'
 
 const requestParamsSchema = object({
@@ -16,11 +17,12 @@ const conversionHandler = async (requestParams: Record<string, any>): Promise<Co
         amount: requestParams['amount']
     })
 
-    const convertedAmount: number = await ExchangeRateApiClient.convert(validParams.sourceCurrency, validParams.targetCurrency, validParams.amount)
+    const sourceAmount: Money = { value: validParams.amount, currency: validParams.sourceCurrency }
+    const convertedAmount: number = await ExchangeRateApiClient.convert(sourceAmount, validParams.targetCurrency)
 
     // this is not essential, don't waint for the completion
     StatsDbClient.recordConversion(
-        { currency: validParams.sourceCurrency, value: validParams.amount },
+        sourceAmount,
         { currency: validParams.targetCurrency, value: convertedAmount })
 
     return {

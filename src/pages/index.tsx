@@ -11,7 +11,7 @@ const Page: React.FC<PageProps> = ({ supportedCurrencies }) => {
     return (
         <>
             <ConversionForm supportedCurrencies={supportedCurrencies} />
-            <Link href="/stats" iconAlignment="left" icon="list">Show me some stats!</Link>
+            <Link href='/stats' iconAlignment='left' icon='list'>Show me some stats!</Link>
         </>
     )
 }

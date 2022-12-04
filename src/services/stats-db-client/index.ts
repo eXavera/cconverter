@@ -1,28 +1,30 @@
-import { MongoClient, ServerApiVersion, Document as MongoDocument, Collection } from 'mongodb'
-import { createLogger, Logger } from '../common/logging'
-import { Currency } from '../common/types/Currency'
-import { Money } from '../common/types/Money'
-import { CurrencyPairStats } from '../features/stats/CurrencyPairStats'
+import {
+    ServerApiVersion,
+    MongoClient,
+    Collection,
+    Db
+} from 'mongodb'
+import { createLogger, Logger } from '../../common/logging'
+import { Money } from '../../common/types/Money'
+import { AggregatedConversionsDocument } from './AggregatedConversionsDocument'
+import { ConversionDocument } from './ConversionDocument'
+import { CurrencyPairStats } from './CurrencyPairStats'
 
 const log: Logger = createLogger('stats MongoDB client')
 
-interface ConversionRecord extends MongoDocument {
-    source: Money,
-    target: Money
-}
-
-type MongoHandler<TResult> = (conversions: Collection<ConversionRecord>) => Promise<TResult>
-
-const magic = async function <TResult>(handler: MongoHandler<TResult>): Promise<TResult> {
+type ConversionsAccessor<TResult> = (conversions: Collection<ConversionDocument>) => Promise<TResult>
+const accessConversions = async function <TResult>(accessor: ConversionsAccessor<TResult>): Promise<TResult> {
     const client = new MongoClient(process.env.MONGODB_CONN_STRING as string, {
         serverApi: ServerApiVersion.v1
     })
+
     log.trace('connecting')
     await client.connect()
     log.trace('connected')
+
     try {
-        const db = client.db('cclient')
-        return await handler(db.collection<ConversionRecord>('conversions'))
+        const db: Db = client.db('cclient')
+        return await accessor(db.collection<ConversionDocument>('conversions'))
     }
     catch (error: any) {
         log.error(error)
@@ -34,19 +36,10 @@ const magic = async function <TResult>(handler: MongoHandler<TResult>): Promise<
     }
 }
 
-interface AggregationResult {
-    _id: {
-        source: Currency,
-        target: Currency
-    },
-    count: number,
-    targetSum: number
-}
-
 export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[]> => {
-    const records = await magic<AggregationResult[]>(async conversions => {
+    const records = await accessConversions<AggregatedConversionsDocument[]>(async (conversions: Collection<ConversionDocument>) => {
         log.trace('running aggregation')
-        const cursor = conversions.aggregate<AggregationResult>([
+        const resultCursor = conversions.aggregate<AggregatedConversionsDocument>([
             {
                 '$group': {
                     '_id': {
@@ -56,22 +49,22 @@ export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[
                     'count': {
                         '$count': {}
                     },
-                    'targetSum': {
+                    'totalTargetAmount': {
                         '$sum': '$target.amount'
                     }
                 }
             }, {
                 '$sort': {
                     'count': -1,
-                    'targetSum': -1
+                    'totalTargetAmount': -1
                 }
             }
         ])
         try {
-            return await cursor.toArray()
+            return await resultCursor.toArray()
         }
         finally {
-            cursor.close()
+            await resultCursor.close()
         }
     })
 
@@ -81,12 +74,12 @@ export const queryMostFrequentConversions = async (): Promise<CurrencyPairStats[
         source: r._id.source,
         target: r._id.target,
         count: r.count,
-        totalTargetAmount: r.targetSum
+        totalTargetAmount: r.totalTargetAmount
     }))
 }
 
 export const recordConversion = async (source: Money, target: Money): Promise<void> => {
-    await magic<void>(async conversions => {
+    await accessConversions(async (conversions: Collection<ConversionDocument>) => {
         log.trace('inserting conversion %j to %j', source, target)
         await conversions.insertOne({ source, target })
         log.info('inserted conversion %j to %j', source, target)

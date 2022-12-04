@@ -1,7 +1,7 @@
-import { SelectNative, SelectNativeProps, SelectOption } from "@purple/phoenix-components"
+import { SelectNative, SelectNativeProps, SelectOption } from '@purple/phoenix-components'
 import { Currency } from '../../../common/types/Currency'
 
-interface SelectCurrencyProps extends Omit<SelectNativeProps, "onChange"> {
+interface SelectCurrencyProps extends Omit<SelectNativeProps, 'onChange'> {
     currency: Currency,
     currencies: Currency[]
     onChange: (value: Currency | null) => void

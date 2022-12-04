@@ -8,7 +8,7 @@ const log: Logger = createLogger('API error handler')
 type RequestHandler<TResp> = (req: NextApiRequest, res: NextApiResponse<TResp>) => Promise<void>
 
 type ErrorText = string
-export function handleErrorsOf<TResp>(apiReqHandler: RequestHandler<TResp>): RequestHandler<TResp | ErrorText> {
+export const handleErrorsOf = function<TResp>(apiReqHandler: RequestHandler<TResp>): RequestHandler<TResp | ErrorText> {
 	return (async (req: NextApiRequest, res: NextApiResponse<TResp | ErrorText>) => {
 		try {
 			await apiReqHandler(req, res)

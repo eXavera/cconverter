@@ -1,13 +1,21 @@
-import { useState } from "react"
-import { Currency } from "../../common/types/Currency"
-import { Money } from "../../common/types/Money"
+import { useState } from 'react'
+import { Currency } from '../../common/types/Currency'
+import { Money } from '../../common/types/Money'
 import { ConvertForm as Config } from '../../common/configuration'
-import styled from "styled-components"
-import { Box, Button, Flex, LinkButton, Notice, NumberInput, Spinner } from "@purple/phoenix-components"
-import { Form, Formik } from "formik"
-import { SelectCurrency } from "./components/SelectCurrency"
-import { ConversionResponse } from "./api/ConversionResponse"
-import { ConversionResult } from "./components/ConversionResult"
+import styled from 'styled-components'
+import {
+    Box,
+    Button,
+    Flex,
+    LinkButton,
+    Notice,
+    NumberInput,
+    Spinner
+} from '@purple/phoenix-components'
+import { Form, Formik } from 'formik'
+import { SelectCurrency } from './subcomponents/SelectCurrency'
+import { ConversionResponse } from './api/ConversionResponse'
+import { ConversionResult } from './subcomponents/ConversionResult'
 
 type ConversionStatus =
     { code: 'ready' } |
@@ -16,11 +24,11 @@ type ConversionStatus =
     { code: 'failed', reason: string }
 
 type ConversionApi = {
-    status: ConversionStatus,
-    convertAmount: (sourceAmount: Money, target: Currency) => Promise<void>
+    status: ConversionStatus;
+    convertAmount: (sourceAmount: Money, target: Currency) => Promise<void>;
 }
 
-const useConvertApi = function (): ConversionApi {
+const useConvertApi = (): ConversionApi => {
     const [status, setStatus] = useState<ConversionStatus>({ code: 'ready' })
 
     return {
@@ -36,6 +44,7 @@ const useConvertApi = function (): ConversionApi {
 
             setStatus({ code: 'pending' })
 
+            // letting the server api calc with integers to avoid precision issues with floating numbers
             const factor: number = Math.pow(10, Config.maxDecimals)
 
             const encode = encodeURIComponent;
@@ -60,17 +69,15 @@ const useConvertApi = function (): ConversionApi {
     }
 }
 
-interface FormValues {
-    sourceAmount: number,
-    sourceCurrency: Currency,
-    targetCurrency: Currency
+const getFirstIfNotExists = function <T>(array: T[], value: T): T {
+    return array.includes(value) ? value : array[0]
 }
 
 const FormContentBox = styled(Flex)`
 flex-direction: column;
 gap: 1em;
 margin-top: 2em;
-@media (min-width: 600px) {
+@media (min-width: 700px) {
     flex-direction: row;
 }
 `
@@ -78,24 +85,28 @@ margin-top: 2em;
 const FormLayoutBox = styled(Flex)`
 flex-direction: column;
 gap: 1em;
-
 `
 
 const CurrenciesBox = styled(Flex)`
 flex-shrink: 0;
 `
 
+interface FormValues {
+    sourceAmount: number
+    sourceCurrency: Currency
+    targetCurrency: Currency
+}
+
 export interface ConversionFormProps {
     supportedCurrencies: Currency[]
 }
-
 export const ConversionForm: React.FC<ConversionFormProps> = ({ supportedCurrencies }) => {
     const { status, convertAmount }: ConversionApi = useConvertApi()
 
     const initialValues: FormValues = {
         sourceAmount: 0,
-        sourceCurrency: 'USD',
-        targetCurrency: 'EUR'
+        sourceCurrency: getFirstIfNotExists(supportedCurrencies, 'USD'),
+        targetCurrency: getFirstIfNotExists(supportedCurrencies, 'EUR')
     }
 
     return (
@@ -103,7 +114,7 @@ export const ConversionForm: React.FC<ConversionFormProps> = ({ supportedCurrenc
             initialValues={initialValues}
             onSubmit={async (values) => await convertAmount({ value: values.sourceAmount, currency: values.sourceCurrency }, values.targetCurrency)}>
             {(props): React.ReactNode => {
-                const { values, setFieldValue, handleSubmit, errors } = props;
+                const { values, setFieldValue, handleSubmit} = props;
 
                 return (
                     <FormLayoutBox>
@@ -123,13 +134,13 @@ export const ConversionForm: React.FC<ConversionFormProps> = ({ supportedCurrenc
                                         currencies={supportedCurrencies}
                                         onChange={(selectedCurrency) => setFieldValue('sourceCurrency', selectedCurrency)} />
                                     <LinkButton
-                                        icon="transfer"
+                                        title='Swap'
+                                        type='button'
+                                        icon='transfer'
+                                        iconAlignment='right'
                                         colorTheme='info'
-                                        size="tiny"
-                                        title="Swap"
+                                        size='tiny'
                                         minimal
-                                        iconAlignment="right"
-                                        type="button"
                                         onClick={() => {
                                             const { sourceCurrency, targetCurrency } = values;
                                             setFieldValue('sourceCurrency', targetCurrency)
@@ -143,20 +154,20 @@ export const ConversionForm: React.FC<ConversionFormProps> = ({ supportedCurrenc
                                         onChange={(selectedCurrency) => setFieldValue('targetCurrency', selectedCurrency)} />
                                 </CurrenciesBox>
                                 <Button
-                                    icon="play-circle"
+                                    type='submit'
+                                    icon='play-circle'
                                     iconAlignment='right'
-                                    type="submit"
                                     loading={status.code === 'pending'}
                                     disabled={status.code === 'pending'}>
                                     Convert
                                 </Button>
                             </FormContentBox>
                         </Form>
-                        <Box mb="1em">
-                            {status.code === 'pending' && <Spinner size="large" />}
+                        <Box mb='s'>
+                            {status.code === 'pending' && <Spinner size='large' />}
                             {status.code === 'converted' && <ConversionResult amount={status.resultAmount} />}
                         </Box>
-                        {status.code === 'failed' && <Notice colorTheme="error">{status.reason}</Notice>}
+                        {status.code === 'failed' && <Notice colorTheme='error'>{status.reason}</Notice>}
                     </FormLayoutBox>
                 )
             }}
