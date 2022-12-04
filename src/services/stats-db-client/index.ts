@@ -23,7 +23,7 @@ const accessConversions = async function <TResult>(accessor: ConversionsAccessor
     log.trace('connected')
 
     try {
-        const db: Db = client.db('cclient')
+        const db: Db = client.db('cconverter')
         return await accessor(db.collection<ConversionDocument>('conversions'))
     }
     catch (error: any) {
